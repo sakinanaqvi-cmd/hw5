@@ -1,9 +1,7 @@
 #ifndef RECCHECK
-// For debugging
 #include <iostream>
-// For std::remove
-#include <algorithm> 
-#include <map>
+#include <algorithm>
+#include <string>
 #include <set>
 #endif
 
@@ -11,53 +9,72 @@
 #include "dict-eng.h"
 using namespace std;
 
-
-// Add prototypes of helper functions here
 void wordleHelper(
-    std::string& curr,
-    const std::string& floating,
+    std::string curr,
+    std::string floating,
     const std::set<std::string>& dict,
-    std::set<std::string> finalVals,
-    int ind) {
-      //BC: at the end of word
-      if(ind == curr.size()) {
-        std::string floating2 = floating;
-        std::string check = curr;
+    std::set<std::string>& finalVals,
+    size_t ind,
+    size_t remDash);
 
-        for(size_t i = 0; i < floating2.size(); ++i) {
-          char c = floating2[i];
-          size_t position = check.find(c);
-          if(position == std::npos) return;
-          check[position] = '*';
-        }
-
-        if(dict.count(curr)) finalVals.insert(curr);
-        return;
-      }
-      if(curr[ind] != '_') wordleHelper(curr, floating, dict, finalVals, ind + 1);
-      else {
-        std::string alphabet = "abcdefghijklmnopqrstuvwxyz";
-        for(size_t i = 0; i < alphabet.size(); ++i) {
-          curr[ind] = alphabet[i];
-          wordleHelper(curr, floating, dict, finalVals, ind + 1);
-        }
-        curr[ind] = '_';
-      }
-
-}
-
-// Definition of primary wordle function
 std::set<std::string> wordle(
     const std::string& in,
     const std::string& floating,
     const std::set<std::string>& dict)
 {
     std::set<std::string> finalVals;
-    std::string curr = in;
-
-    wordleHelper(curr, floating, dict, finalVals, 0);
+    size_t remDash = count(in.begin(), in.end(), '-'); // Precompute dashes
+    wordleHelper(in, floating, dict, finalVals, 0, remDash);
     return finalVals;
-
 }
 
-// Define any helper functions here
+void wordleHelper(
+    std::string curr,
+    std::string floating,
+    const std::set<std::string>& dict,
+    std::set<std::string>& finalVals,
+    size_t ind,
+    size_t remDash)
+{
+    //where no floating and the word is ended
+    if (ind == curr.size()) {
+        if (dict.find(curr) != dict.end() && floating.empty()) finalVals.insert(curr);
+        return;
+    }
+
+    //handles if char is not dash and within bounds
+    if (curr[ind] != '-' && curr.size() > ind) {
+        wordleHelper(curr, floating, dict, finalVals, ind + 1, remDash);
+        return;
+    }
+
+    if (floating.size() + 26 < remDash) {
+        return; 
+    }
+
+    //fill dashes with floating
+     for (size_t i = 0; i < floating.size(); i++) {
+         char c = floating[i];
+         //replace dash at the current
+         curr[ind] = c;
+
+         std::string floatTemp = floating;
+         //remove used letters from floating 
+         floatTemp.erase(i, 1);
+
+         wordleHelper(curr, floatTemp, dict, finalVals, ind + 1, remDash - 1);
+         //backtrack
+         curr[ind] = '-';
+     }
+
+    //if dashes are more than floating, fill dash with other letters
+    string alph = "abcdefghijklmnopqrstuvwxyz"; 
+    if (floating.size() < remDash) {
+        for (char c : alph) {
+            curr[ind] = c;
+            wordleHelper(curr, floating, dict, finalVals, ind + 1, remDash - 1);
+            //backtrack
+            curr[ind] = '-';
+        }
+    }
+}
